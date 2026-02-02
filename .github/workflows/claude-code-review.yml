@@ -37,25 +37,9 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          # Allow gh CLI commands for posting PR comments and reviews
-          claude_args: '--allowedTools "Bash(gh *)"'
-          prompt: |
-            Review the code changes in this pull request against the coding standards in CLAUDE.md.
-
-            First, get the PR diff:
-            gh pr diff ${{ github.event.pull_request.number }}
-
-            Then analyze the changes for:
-            - Code style and best practices
-            - Type hints and documentation
-            - Security issues
-            - Error handling
-            - Any violations of the guidelines in CLAUDE.md
-
-            After your analysis, post your review as a PR comment using:
-            gh pr review ${{ github.event.pull_request.number }} --comment --body "YOUR_REVIEW_HERE"
-
-            If there are specific issues, you can also add inline comments on specific files/lines.
+          plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
+          plugins: 'code-review@claude-code-plugins'
+          prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }} --comment'
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
 
