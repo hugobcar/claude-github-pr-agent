@@ -38,8 +38,8 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # Allow gh CLI commands for posting PR comments and reviews
-          allowed_tools: 'Bash(gh *)'
-          direct_prompt: |
+          claude_args: '--allowedTools "Bash(gh *)"'
+          prompt: |
             Review the code changes in this pull request against the coding standards in CLAUDE.md.
 
             First, get the PR diff:

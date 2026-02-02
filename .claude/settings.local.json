@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git show-branch:*)"
+      "Bash(git show-branch:*)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }
