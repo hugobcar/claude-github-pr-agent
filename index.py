@@ -17,5 +17,5 @@ def get():
     return "Hello, World"
 
 @app.route("/bug")
-def get():
+def bug():
     return "/bug"
