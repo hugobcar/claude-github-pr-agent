@@ -73,6 +73,43 @@ This document defines the coding standards and best practices for this project. 
 - Reference issue numbers when applicable
 - Keep commits atomic and focused
 
+## Bugsnag Workflow Guidelines
+
+When handling Bugsnag issues via the `claude-bugsnag.yml` workflow, follow these guidelines for creating branches and pull requests:
+
+### Branch Naming
+
+- Branch name format: `bugfix/issue-<issue_number>`
+- Always branch from `main`
+
+### PR Creation
+
+- **Target branch**: Always use `--base main` to target the main branch
+- **Title format**: `fix(bugsnag-<issue_number>): <short description of the fix>`
+  - Example: `fix(bugsnag-42): handle null pointer in user authentication`
+- **Reviewers**: Read the `REVIEWERS` environment variable (comma-separated) and add each as a `--reviewer` flag
+  - Example: `gh pr create --base main --reviewer user1 --reviewer user2`
+- **PR body must include**:
+  - A clear description of what caused the bug (root cause analysis)
+  - An explanation of the fix and how it resolves the issue
+  - A reference to the originating issue using `Fixes #<issue_number>`
+
+### Bug Fix Process
+
+1. Analyze the stack trace and error details from the Bugsnag issue
+2. Locate the relevant source files and understand the root cause
+3. Implement a fix following the code standards defined in this document
+4. Commit with a clear message referencing the issue number
+5. Open a PR following the conventions above
+6. Comment on the original issue summarizing findings and linking to the PR
+
+### Fix Quality Standards
+
+- Fixes must address the root cause, not just suppress the error
+- Include appropriate error handling around the fix
+- Ensure the fix does not introduce regressions
+- Follow all code style, type hint, and documentation standards from this document
+
 ## Review Checklist
 
 When reviewing code, verify:

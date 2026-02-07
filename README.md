@@ -6,7 +6,18 @@ Automated code review for GitHub pull requests using Claude AI.
 
 This project integrates Anthropic's Claude Code into your GitHub workflow to automatically review pull requests. When a PR is opened or updated, Claude analyzes the code changes against your project's coding standards and provides feedback as PR comments.
 
+## Workflows
+
+This project includes two GitHub Actions workflows:
+
+| Workflow | File | Trigger | Purpose |
+|----------|------|---------|---------|
+| PR Code Review | `claude-code-review.yml` | Pull request opened/updated | Automated code review |
+| Bugsnag Bug Fix | `claude-bugsnag.yml` | Issue opened (via Bugsnag) | Automated bug analysis and fix |
+
 ## How It Works
+
+### PR Code Review
 
 ```
 ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
@@ -25,6 +36,35 @@ This project integrates Anthropic's Claude Code into your GitHub workflow to aut
 2. **Action**: GitHub Actions runs the `anthropics/claude-code-action@v1`
 3. **Review**: Claude analyzes changes against guidelines in `CLAUDE.md`
 4. **Feedback**: Review results are posted as comments on the PR
+
+### Bugsnag Automated Bug Fix
+
+```
+┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│  Bugsnag Error  │────▶│  GitHub Issue    │────▶│  GitHub Actions │
+│  Detected       │     │  Created         │     │  Triggers       │
+└─────────────────┘     └──────────────────┘     └────────┬────────┘
+                                                          │
+                                                          ▼
+                                                ┌─────────────────┐
+                                                │  Claude Code    │
+                                                │  Analyzes Error │
+                                                └────────┬────────┘
+                                                         │
+                                          ┌──────────────┼──────────────┐
+                                          ▼              ▼              ▼
+                                   ┌────────────┐ ┌────────────┐ ┌────────────┐
+                                   │ Creates    │ │ Opens PR   │ │ Comments   │
+                                   │ Fix Branch │ │ with Fix   │ │ on Issue   │
+                                   └────────────┘ └────────────┘ └────────────┘
+```
+
+1. **Trigger**: A Bugsnag error creates a GitHub issue (detected by "Created by ... via Bugsnag" in the issue body)
+2. **Analysis**: Claude analyzes the stack trace and error details to understand the root cause
+3. **Code Location**: Claude finds the relevant files and code sections causing the bug
+4. **Fix Branch**: A new branch `bugfix/issue-<number>` is created from main
+5. **Pull Request**: A PR is opened with the fix, linking back to the issue, and reviewers are assigned
+6. **Issue Comment**: Claude comments on the original issue with findings and a link to the PR
 
 ## Setup
 
@@ -45,11 +85,35 @@ You need an OAuth token from Anthropic to authenticate Claude Code.
 5. Value: Paste your OAuth token
 6. Click **Add secret**
 
-### 3. Copy Workflow File
+### 3. Configure Reviewers (For Bugsnag Workflow)
 
-The workflow file is located at `.github/workflows/claude-code-review.yml`. If you're using this as a template for another project, copy this file to your repository.
+1. Go to your repository on GitHub
+2. Navigate to **Settings** → **Secrets and variables** → **Actions** → **Variables**
+3. Click **New repository variable**
+4. Name: `REVIEWERS`
+5. Value: Comma-separated list of GitHub usernames (e.g., `user1,user2`)
+6. Click **Add variable**
 
-### 4. Customize Review Guidelines (Optional)
+This ensures PRs created by the Bugsnag workflow are automatically assigned to reviewers.
+
+### 4. Copy Workflow Files
+
+The workflow files are located in `.github/workflows/`:
+- `claude-code-review.yml` — PR code review workflow
+- `claude-bugsnag.yml` — Bugsnag automated bug fix workflow
+
+If you're using this as a template for another project, copy the workflow files you need to your repository.
+
+### 5. Configure Bugsnag Integration (For Bugsnag Workflow)
+
+To use the Bugsnag workflow, you need Bugsnag configured to create GitHub issues when errors occur:
+
+1. In your Bugsnag project, go to **Settings** → **Integrations** → **GitHub Issues**
+2. Enable automatic issue creation for new errors
+3. Bugsnag will create GitHub issues that include the error details and stack trace
+4. The workflow automatically detects these issues by looking for "Created by ... via Bugsnag" in the issue body
+
+### 6. Customize Review Guidelines (Optional)
 
 Edit `CLAUDE.md` to define your project's coding standards. Claude uses this file to understand what to check during reviews.
 
@@ -125,10 +189,11 @@ Review only external contributors:
 claude-github-pr-agent/
 ├── .github/
 │   └── workflows/
-│       └── claude-code-review.yml  # GitHub Actions workflow
-├── CLAUDE.md                        # Code review guidelines
-├── example.py                       # Example Python code for testing
-└── README.md                        # This file
+│       ├── claude-code-review.yml   # PR code review workflow
+│       └── claude-bugsnag.yml       # Bugsnag bug fix workflow
+├── CLAUDE.md                         # Code review guidelines
+├── example.py                        # Example Python code for testing
+└── README.md                         # This file
 ```
 
 ## Code Review Guidelines
@@ -167,6 +232,8 @@ The `CLAUDE.md` file defines what Claude checks during reviews:
 - GitHub repository with Actions enabled
 - Anthropic Claude Code OAuth token
 - Pull request workflow permissions (read contents, read/write PRs)
+- Bugsnag integration with GitHub Issues (for the Bugsnag workflow)
+- `REVIEWERS` repository variable (for the Bugsnag workflow)
 
 ## License
 
