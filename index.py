@@ -1,6 +1,7 @@
 import bugsnag
 from bugsnag.flask import handle_exceptions
 import os
+from flask import Flask
 
 # Configure bugsnag
 bugsnag.configure(
@@ -17,6 +18,4 @@ def get():
 
 @app.route("/bug")
 def get():
-    names = ("hugo")
-    names.append("bruno")
     return "/bug"
