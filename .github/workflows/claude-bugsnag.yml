@@ -1,0 +1,132 @@
+name: Claude Code Bugsnag Handler
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  claude:
+    if: |
+      github.event_name == 'issues' &&
+      contains(github.event.issue.body, 'Created by') &&
+      contains(github.event.issue.body, 'via Bugsnag')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write       # Required to create branches and push code
+      pull-requests: write  # Required to create pull requests
+      issues: write         # Required to comment on issues
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0    # Full history for better code analysis
+
+      - name: Run Claude Code
+        id: claude
+        uses: anthropics/claude-code-action@v1
+        env:
+          REVIEWERS: ${{ vars.REVIEWERS }}
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_args: |
+            --allowedTools "Bash(gh:*)","Bash(git:*)",Read,Edit,Write,Grep,Glob,LS
+          prompt: |
+            This is an automated bug report from Bugsnag. Please:
+
+            1. **Analyze the Error**: Review the stack trace and error details in this issue to understand the root cause.
+
+            2. **Locate the Code**: Find the relevant files and code sections causing this bug.
+
+            3. **Create a Fix Branch**: Create a new branch named `bugfix/issue-${{ github.event.issue.number }}` from the main branch.
+
+            4. **Implement the Fix**: Write and commit the necessary code changes to fix this bug.
+
+            5. **Create a Pull Request**: Open a PR **targeting the `main` branch** and linking back to this issue with:
+               - **IMPORTANT**: Always use `--base main` when creating the PR to ensure it targets the main branch (not main)
+               - **PR Title Format**: Use the format `fix(bugsnag-${{ github.event.issue.number }}): <short description of the fix>` (e.g., `fix(bugsnag-123): handle proxy errors gracefully`)
+               - **Add Reviewers**: When creating the PR, add reviewers from the REVIEWERS environment variable (comma-separated list). Convert each reviewer to a `--reviewer` flag. Example: `gh pr create --base dev --reviewer user1 --reviewer user2 ...`
+                 - This ensures the PR is assigned to the team for review
+                 - Each `--reviewer` flag adds one reviewer to the PR
+               - A clear description of what caused the bug
+               - An explanation of the fix
+               - Reference to this issue using "Fixes #${{ github.event.issue.number }}"
+
+            6. **Comment on Issue**: Add a comment to this issue summarizing your findings and linking to the PR.
+
+      # - name: Get PR Information
+      #   if: success()
+      #   id: get-pr-info
+      #   env:
+      #     GH_TOKEN: ${{ github.token }}
+      #   run: |
+      #     # Find the PR created for this bugfix branch
+      #     BRANCH_NAME="bugfix/issue-${{ github.event.issue.number }}"
+
+      #     # Get PR info using gh CLI
+      #     PR_INFO=$(gh pr list --head "$BRANCH_NAME" --json number,title,url --limit 1)
+
+      #     if [ "$(echo "$PR_INFO" | jq length)" -gt 0 ]; then
+      #       PR_TITLE=$(echo "$PR_INFO" | jq -r '.[0].title')
+      #       PR_URL=$(echo "$PR_INFO" | jq -r '.[0].url')
+      #       echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
+      #       echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+      #       echo "✅ Found PR: $PR_TITLE"
+      #     else
+      #       echo "⚠️ No PR found for branch $BRANCH_NAME"
+      #       echo "pr_title=PR Not Found" >> $GITHUB_OUTPUT
+      #       echo "pr_url=" >> $GITHUB_OUTPUT
+      #     fi
+
+      # - name: Send Slack Notification
+      #   if: success()
+      #   run: |
+      #     ISSUE_URL="${{ github.event.issue.html_url }}"
+      #     PR_TITLE="${{ steps.get-pr-info.outputs.pr_title }}"
+      #     PR_URL="${{ steps.get-pr-info.outputs.pr_url }}"
+
+      #     curl -X POST ${{ secrets.SLACK_WEBHOOK }} \
+      #       -H "Content-Type: application/json" \
+      #       --data "$(jq -n \
+      #         --arg issue "$ISSUE_URL" \
+      #         --arg pr_title "$PR_TITLE" \
+      #         --arg pr_url "$PR_URL" \
+      #         '{
+      #           "channel": "#tfl-bugsnag-prs",
+      #           "blocks": [
+      #             {
+      #               "type": "header",
+      #               "text": {
+      #                 "type": "plain_text",
+      #                 "text": "🐛 Bugsnag - New PR Created",
+      #                 "emoji": true
+      #               }
+      #             },
+      #             {
+      #               "type": "section",
+      #               "fields": [
+      #                 {
+      #                   "type": "mrkdwn",
+      #                   "text": ("*GitHub Issue:*\n<" + $issue + "|View Issue>")
+      #                 },
+      #                 {
+      #                   "type": "mrkdwn",
+      #                   "text": ("*Source:*\n`bugsnag`")
+      #                 }
+      #               ]
+      #             },
+      #             {
+      #               "type": "section",
+      #               "fields": [
+      #                 {
+      #                   "type": "mrkdwn",
+      #                   "text": ("*PR Title:*\n" + $pr_title)
+      #                 },
+      #                 {
+      #                   "type": "mrkdwn",
+      #                   "text": ("*PR URL:*\n<" + $pr_url + "|View PR>")
+      #                 }
+      #               ]
+      #             }
+      #           ]
+      #         }')"
